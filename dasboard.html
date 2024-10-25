@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="dashboard-container">
+      <!-- Sidebar with navigation links -->
+      <aside class="sidebar">
+        <div class="logo">Company Logo</div>
+        <nav>
+          <ul>
+            <li onclick="navigateTo('profile')">Profile Settings</li>
+            <li onclick="navigateTo('clock')">Clock In/Out</li>
+            <li onclick="navigateTo('messages')">
+              Messages <span id="notificationBadge" class="notification"></span>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- Main content area -->
+      <div id="content">
+        <!-- Profile Section -->
+        <div id="profile" class="section">
+          <h2>Profile Settings</h2>
+          <p>Welcome, <span id="usernameDisplay"></span>!</p>
+        </div>
+
+        <!-- Clock In/Out Section -->
+        <div id="clock" class="section" style="display: none">
+          <h2>Clock In/Out</h2>
+          <button onclick="clockIn()">Clock In</button>
+          <button onclick="clockOut()">Clock Out</button>
+        </div>
+
+        <!-- Messages Section -->
+        <div id="messages" class="section" style="display: none">
+          <h2>Messages</h2>
+          <div id="chatBox"></div>
+          <textarea
+            id="messageInput"
+            placeholder="Type your message..."
+          ></textarea>
+          <button onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase and Firestore SDKs -->
+    <script
+      src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"
+      defer
+    ></script>
+    <script
+      src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"
+      defer
+    ></script>
+
+    <!-- Firebase Initialization -->
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyDZNNdeEt2ifdHaj7UF3_idH_WhYjWKRuw",
+        authDomain: "jireh-fc-website.firebaseapp.com",
+        projectId: "jireh-fc-website",
+        storageBucket: "jireh-fc-website.appspot.com",
+        messagingSenderId: "456425159457",
+        appId: "1:456425159457:web:799c60532953e463ad1c60",
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+    </script>
+
+    <!-- Dashboard Script -->
+    <script>
+      const user = JSON.parse(localStorage.getItem("user"));
+
+      // Display username in Profile Settings
+      document.getElementById("usernameDisplay").innerText = user
+        ? user.username
+        : "User";
+
+      // Role-based access to Messages section
+      if (user && user.role === "owner") {
+        document.getElementById("messages").style.display = "block";
+      }
+
+      // Function to handle navigation within the dashboard
+      function navigateTo(section) {
+        document
+          .querySelectorAll(".section")
+          .forEach((s) => (s.style.display = "none"));
+        document.getElementById(section).style.display = "block";
+      }
+
+      // Mock Clock In/Out functionality
+      function clockIn() {
+        alert("Clocked In");
+      }
+
+      function clockOut() {
+        alert("Clocked Out");
+      }
+
+      // Messaging Functionality
+      const chatBox = document.getElementById("chatBox");
+      const messageInput = document.getElementById("messageInput");
+      const notificationBadge = document.getElementById("notificationBadge");
+
+      function sendMessage() {
+        const message = messageInput.value.trim();
+        if (message) {
+          db.collection("messages").add({
+            sender: user.username,
+            message: message,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          messageInput.value = "";
+        }
+      }
+
+      // Display messages in real-time
+      db.collection("messages")
+        .orderBy("timestamp")
+        .onSnapshot((snapshot) => {
+          chatBox.innerHTML = "";
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const messageElement = document.createElement("p");
+            messageElement.textContent = `${data.sender}: ${data.message}`;
+            chatBox.appendChild(messageElement);
+
+            // Display notification for new messages
+            if (data.sender !== user.username) {
+              notificationBadge.textContent = "New!";
+            }
+          });
+        });
+    </script>
+  </body>
+</html>
